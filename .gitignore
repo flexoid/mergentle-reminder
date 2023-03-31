@@ -1,0 +1,40 @@
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.o
+*.a
+*.mod
+*.swp
+*.swp.old
+*.bak
+*.tmp
+*.orig
+*.[1-9]
+*.[1-9].old
+
+# Go binary and package directories
+bin/
+pkg/
+vendor/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.iml
+*.user
+*.suo
+*.sln
+*.sln.docstates
+*.log
+
+# OS-specific files and directories
+.DS_Store
+Thumbs.db
+
+# Config
+config.yaml

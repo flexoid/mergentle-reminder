@@ -1,0 +1,8 @@
+gitlab:
+  url: https://gitlab.monterosa.co.uk
+projects:
+  - id: 123
+  - id: 456
+groups:
+  - id: 1
+  - id: 2
