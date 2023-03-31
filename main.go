@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/slack-go/slack"
 	"github.com/xanzy/go-gitlab"
 	"gopkg.in/yaml.v2"
 )
@@ -71,14 +72,28 @@ func readConfig(file string) (*Config, error) {
 func fetchProjectsFromGroups(config *Config, client *gitlab.Client) ([]int, error) {
 	var projectIDs []int
 	for _, group := range config.Groups {
-		options := &gitlab.ListGroupProjectsOptions{}
-		projects, _, err := client.Groups.ListGroupProjects(group.ID, options)
-		if err != nil {
-			return nil, err
+		options := &gitlab.ListGroupProjectsOptions{
+			ListOptions: gitlab.ListOptions{
+				PerPage: 50,
+				Page:    1,
+			},
 		}
 
-		for _, project := range projects {
-			projectIDs = append(projectIDs, project.ID)
+		for {
+			projects, resp, err := client.Groups.ListGroupProjects(group.ID, options)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, project := range projects {
+				projectIDs = append(projectIDs, project.ID)
+			}
+
+			if resp.CurrentPage >= resp.TotalPages {
+				break
+			}
+
+			options.Page = resp.NextPage
 		}
 	}
 
@@ -104,14 +119,26 @@ func fetchOpenedMergeRequests(config *Config, client *gitlab.Client) ([]*gitlab.
 			OrderBy: gitlab.String("updated_at"),
 			Sort:    gitlab.String("desc"),
 			WIP:     gitlab.String("no"),
+			ListOptions: gitlab.ListOptions{
+				PerPage: 50,
+				Page:    1,
+			},
 		}
 
-		mrs, _, err := client.MergeRequests.ListProjectMergeRequests(projectID, options)
-		if err != nil {
-			return nil, err
-		}
+		for {
+			mrs, resp, err := client.MergeRequests.ListProjectMergeRequests(projectID, options)
+			if err != nil {
+				return nil, err
+			}
 
-		allMRs = append(allMRs, mrs...)
+			allMRs = append(allMRs, mrs...)
+
+			if resp.CurrentPage >= resp.TotalPages {
+				break
+			}
+
+			options.Page = resp.NextPage
+		}
 	}
 
 	return allMRs, nil
