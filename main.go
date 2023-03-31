@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/slack-go/slack"
 	"github.com/xanzy/go-gitlab"
@@ -20,6 +21,11 @@ type Config struct {
 	Groups []struct {
 		ID int `yaml:"id"`
 	} `yaml:"groups"`
+}
+
+type MergeRequestWithApprovals struct {
+	MergeRequest *gitlab.MergeRequest
+	ApprovedBy   []string
 }
 
 func main() {
@@ -100,8 +106,8 @@ func fetchProjectsFromGroups(config *Config, client *gitlab.Client) ([]int, erro
 	return projectIDs, nil
 }
 
-func fetchOpenedMergeRequests(config *Config, client *gitlab.Client) ([]*gitlab.MergeRequest, error) {
-	var allMRs []*gitlab.MergeRequest
+func fetchOpenedMergeRequests(config *Config, client *gitlab.Client) ([]*MergeRequestWithApprovals, error) {
+	var allMRs []*MergeRequestWithApprovals
 
 	// Add projects from groups to the projects list
 	projectIDs, err := fetchProjectsFromGroups(config, client)
@@ -131,7 +137,22 @@ func fetchOpenedMergeRequests(config *Config, client *gitlab.Client) ([]*gitlab.
 				return nil, err
 			}
 
-			allMRs = append(allMRs, mrs...)
+			for _, mr := range mrs {
+				approvals, _, err := client.MergeRequestApprovals.GetConfiguration(projectID, mr.IID)
+				if err != nil {
+					return nil, err
+				}
+
+				approvedBy := make([]string, len(approvals.ApprovedBy))
+				for i, approver := range approvals.ApprovedBy {
+					approvedBy[i] = approver.User.Name
+				}
+
+				allMRs = append(allMRs, &MergeRequestWithApprovals{
+					MergeRequest: mr,
+					ApprovedBy:   approvedBy,
+				})
+			}
 
 			if resp.CurrentPage >= resp.TotalPages {
 				break
@@ -144,12 +165,17 @@ func fetchOpenedMergeRequests(config *Config, client *gitlab.Client) ([]*gitlab.
 	return allMRs, nil
 }
 
-func formatMergeRequestsSummary(mrs []*gitlab.MergeRequest) string {
+func formatMergeRequestsSummary(mrs []*MergeRequestWithApprovals) string {
 	var summary string
 	for _, mr := range mrs {
+		approvedBy := strings.Join(mr.ApprovedBy, ", ")
+		if approvedBy == "" {
+			approvedBy = "None"
+		}
+
 		summary += fmt.Sprintf(
-			"Title: %s\nURL: %s\nAuthor: %s\nCreated at: %s\nUpvotes: %d\nDownvotes: %d\nStatus: %s\n\n",
-			mr.Title, mr.WebURL, mr.Author.Name, mr.CreatedAt, mr.Upvotes, mr.Downvotes, mr.State,
+			":arrow_forward: *Title:* <%s|%s>\n*Author:* %s\n*Created at:* %s\n*Approved by:* %s\n\n",
+			mr.MergeRequest.WebURL, mr.MergeRequest.Title, mr.MergeRequest.Author.Name, mr.MergeRequest.CreatedAt, approvedBy,
 		)
 	}
 
@@ -157,10 +183,8 @@ func formatMergeRequestsSummary(mrs []*gitlab.MergeRequest) string {
 }
 
 func sendSlackMessage(webhookURL, message string) error {
-	// msg := slack.WebhookMessage{
-	// 	Text: message,
-	// }
-	// return slack.PostWebhook(webhookURL, &msg)
-	fmt.Printf("Sending message to Slack:\n%s\n", message)
-	return nil
+	msg := slack.WebhookMessage{
+		Text: message,
+	}
+	return slack.PostWebhook(webhookURL, &msg)
 }
