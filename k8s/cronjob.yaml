@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mergentle-reminder
+  namespace: mergentle-reminder
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: mergentle-reminder
+              image: flexoid/mergentle-reminder:latest
+              env:
+                - name: GITLAB_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: mergentle-reminder-secrets
+                      key: gitlab-token
+                - name: SLACK_WEBHOOK_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: mergentle-reminder-secrets
+                      key: slack-webhook-url
+                - name: CONFIG_PATH
+                  value: /config/config.yaml
+              volumeMounts:
+                - name: config-volume
+                  mountPath: /config
+          volumes:
+            - name: config-volume
+              configMap:
+                name: mergentle-reminder-config
+          restartPolicy: OnFailure

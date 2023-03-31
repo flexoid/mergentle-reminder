@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mergentle-reminder-config
+  namespace: mergentle-reminder
+data:
+  config.yaml: |
+    gitlab:
+      url: "https://your-gitlab-url.com"
+    projects:
+      - id: 1
+      - id: 2
+    groups:
+      - id: 3
