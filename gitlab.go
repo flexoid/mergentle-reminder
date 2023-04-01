@@ -2,6 +2,7 @@ package main
 
 import "github.com/xanzy/go-gitlab"
 
+//go:generate mockery --name GitLabClient
 type GitLabClient interface {
 	ListGroupProjects(groupID int, options *gitlab.ListGroupProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)
 	ListProjectMergeRequests(projectID int, options *gitlab.ListProjectMergeRequestsOptions) ([]*gitlab.MergeRequest, *gitlab.Response, error)

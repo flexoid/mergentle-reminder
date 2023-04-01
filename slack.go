@@ -2,6 +2,7 @@ package main
 
 import "github.com/slack-go/slack"
 
+//go:generate mockery --name SlackClient
 type SlackClient interface {
 	PostWebhook(payload *slack.WebhookMessage) error
 }

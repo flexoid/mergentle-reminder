@@ -14,12 +14,16 @@ type Config struct {
 	GitLab struct {
 		URL string `yaml:"url"`
 	} `yaml:"gitlab"`
-	Projects []struct {
-		ID int `yaml:"id"`
-	} `yaml:"projects"`
-	Groups []struct {
-		ID int `yaml:"id"`
-	} `yaml:"groups"`
+	Projects []ConfigProject
+	Groups   []ConfigGroup
+}
+
+type ConfigGroup struct {
+	ID int `yaml:"id"`
+}
+
+type ConfigProject struct {
+	ID int `yaml:"id"`
 }
 
 func main() {
