@@ -53,6 +53,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if len(mrs) == 0 {
+		fmt.Println("No opened merge requests found.")
+		os.Exit(0)
+	}
+
 	summary := formatMergeRequestsSummary(mrs)
 
 	slackClient := &slackClient{webhookURL: os.Getenv("SLACK_WEBHOOK_URL")}
