@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/slack-go/slack"
 	"github.com/xanzy/go-gitlab"
 	"gopkg.in/yaml.v2"
 )
@@ -23,11 +22,6 @@ type Config struct {
 	} `yaml:"groups"`
 }
 
-type MergeRequestWithApprovals struct {
-	MergeRequest *gitlab.MergeRequest
-	ApprovedBy   []string
-}
-
 func main() {
 	configPath := os.Getenv("CONFIG_PATH")
 	if configPath == "" {
@@ -40,12 +34,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	gitlabClient, err := gitlab.NewClient(os.Getenv("GITLAB_TOKEN"),
+	glClient, err := gitlab.NewClient(os.Getenv("GITLAB_TOKEN"),
 		gitlab.WithBaseURL(config.GitLab.URL))
 	if err != nil {
 		fmt.Printf("Error creating GitLab client: %v\n", err)
 		os.Exit(1)
 	}
+
+	gitlabClient := &gitLabClient{client: glClient}
 
 	mrs, err := fetchOpenedMergeRequests(config, gitlabClient)
 	if err != nil {
@@ -55,8 +51,8 @@ func main() {
 
 	summary := formatMergeRequestsSummary(mrs)
 
-	slackWebhookURL := os.Getenv("SLACK_WEBHOOK_URL")
-	err = sendSlackMessage(slackWebhookURL, summary)
+	slackClient := &slackClient{webhookURL: os.Getenv("SLACK_WEBHOOK_URL")}
+	err = sendSlackMessage(slackClient, summary)
 	if err != nil {
 		fmt.Printf("Error sending Slack message: %v\n", err)
 		os.Exit(1)
@@ -80,96 +76,6 @@ func readConfig(file string) (*Config, error) {
 	return &config, nil
 }
 
-func fetchProjectsFromGroups(config *Config, client *gitlab.Client) ([]int, error) {
-	var projectIDs []int
-	for _, group := range config.Groups {
-		options := &gitlab.ListGroupProjectsOptions{
-			ListOptions: gitlab.ListOptions{
-				PerPage: 50,
-				Page:    1,
-			},
-		}
-
-		for {
-			projects, resp, err := client.Groups.ListGroupProjects(group.ID, options)
-			if err != nil {
-				return nil, err
-			}
-
-			for _, project := range projects {
-				projectIDs = append(projectIDs, project.ID)
-			}
-
-			if resp.CurrentPage >= resp.TotalPages {
-				break
-			}
-
-			options.Page = resp.NextPage
-		}
-	}
-
-	return projectIDs, nil
-}
-
-func fetchOpenedMergeRequests(config *Config, client *gitlab.Client) ([]*MergeRequestWithApprovals, error) {
-	var allMRs []*MergeRequestWithApprovals
-
-	// Add projects from groups to the projects list
-	projectIDs, err := fetchProjectsFromGroups(config, client)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, project := range config.Projects {
-		projectIDs = append(projectIDs, project.ID)
-	}
-
-	for _, projectID := range projectIDs {
-		options := &gitlab.ListProjectMergeRequestsOptions{
-			State:   gitlab.String("opened"),
-			OrderBy: gitlab.String("updated_at"),
-			Sort:    gitlab.String("desc"),
-			WIP:     gitlab.String("no"),
-			ListOptions: gitlab.ListOptions{
-				PerPage: 50,
-				Page:    1,
-			},
-		}
-
-		for {
-			mrs, resp, err := client.MergeRequests.ListProjectMergeRequests(projectID, options)
-			if err != nil {
-				return nil, err
-			}
-
-			for _, mr := range mrs {
-				approvals, _, err := client.MergeRequestApprovals.GetConfiguration(projectID, mr.IID)
-				if err != nil {
-					return nil, err
-				}
-
-				approvedBy := make([]string, len(approvals.ApprovedBy))
-				for i, approver := range approvals.ApprovedBy {
-					approvedBy[i] = approver.User.Name
-				}
-
-				allMRs = append(allMRs, &MergeRequestWithApprovals{
-					MergeRequest: mr,
-					ApprovedBy:   approvedBy,
-				})
-			}
-
-			if resp.CurrentPage >= resp.TotalPages {
-				break
-			}
-
-			options.Page = resp.NextPage
-		}
-	}
-
-	return allMRs, nil
-}
-
 func formatMergeRequestsSummary(mrs []*MergeRequestWithApprovals) string {
 	var summary string
 	for _, mr := range mrs {
@@ -185,11 +91,4 @@ func formatMergeRequestsSummary(mrs []*MergeRequestWithApprovals) string {
 	}
 
 	return summary
-}
-
-func sendSlackMessage(webhookURL, message string) error {
-	msg := slack.WebhookMessage{
-		Text: message,
-	}
-	return slack.PostWebhook(webhookURL, &msg)
 }

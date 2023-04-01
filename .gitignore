@@ -15,6 +15,7 @@
 *.orig
 *.[1-9]
 *.[1-9].old
+/mergentle-reminder
 
 # Go binary and package directories
 bin/
