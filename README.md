@@ -1,5 +1,7 @@
 # Mergentle Reminder
 
+![Bot Icon](https://user-images.githubusercontent.com/335778/229349568-45de06a6-b078-4e03-9883-e727be9befcb.png)
+
 Mergentle Reminder is a Slack bot that periodically checks configured GitLab projects and groups for opened merge requests, then sends a summary list of merge requests to review to the configured Slack channel.
 
 The name "Mergentle Reminder" is a playful combination of the words "merge" and "gentle." The name emphasizes the purpose of the project, which is to gently remind the team to review open merge requests.
