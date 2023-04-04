@@ -4,7 +4,8 @@ metadata:
   name: mergentle-reminder
   namespace: mergentle-reminder
 spec:
-  schedule: "0 * * * *"
+  # Every working day at 7:00 and 13:00 UTC.
+  schedule: "00 7,13 * * 1-5"
   jobTemplate:
     spec:
       template:
@@ -12,6 +13,13 @@ spec:
           containers:
             - name: mergentle-reminder
               image: flexoid/mergentle-reminder:latest
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
               env:
                 - name: GITLAB_TOKEN
                   valueFrom:
