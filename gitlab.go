@@ -5,6 +5,7 @@ import "github.com/xanzy/go-gitlab"
 //go:generate mockery --name GitLabClient
 type GitLabClient interface {
 	ListGroupProjects(groupID int, options *gitlab.ListGroupProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)
+	ListSubGroups(groupID int, opt *gitlab.ListSubGroupsOptions, options ...gitlab.RequestOptionFunc) ([]*gitlab.Group, *gitlab.Response, error)
 	ListProjectMergeRequests(projectID int, options *gitlab.ListProjectMergeRequestsOptions) ([]*gitlab.MergeRequest, *gitlab.Response, error)
 	GetMergeRequestApprovalsConfiguration(projectID int, mergeRequestID int) (*gitlab.MergeRequestApprovals, *gitlab.Response, error)
 }
@@ -22,6 +23,10 @@ func (c *gitLabClient) ListGroupProjects(groupID int, options *gitlab.ListGroupP
 	return c.client.Groups.ListGroupProjects(groupID, options)
 }
 
+func (c *gitLabClient) ListSubGroups(groupID int, opt *gitlab.ListSubGroupsOptions, options ...gitlab.RequestOptionFunc) ([]*gitlab.Group, *gitlab.Response, error) {
+	return c.client.Groups.ListSubGroups(groupID, opt, options...)
+}
+
 func (c *gitLabClient) ListProjectMergeRequests(projectID int, options *gitlab.ListProjectMergeRequestsOptions) ([]*gitlab.MergeRequest, *gitlab.Response, error) {
 	return c.client.MergeRequests.ListProjectMergeRequests(projectID, options)
 }
@@ -31,10 +36,21 @@ func (c *gitLabClient) GetMergeRequestApprovalsConfiguration(projectID int, merg
 }
 
 func fetchOpenedMergeRequests(config *Config, client GitLabClient) ([]*MergeRequestWithApprovals, error) {
-	var allMRs []*MergeRequestWithApprovals
+	var groupIDs []int
+	for _, group := range config.Groups {
+		groupIDs = append(groupIDs, group.ID)
 
-	// Add projects from groups to the projects list
-	projectIDs, err := fetchProjectsFromGroups(config, client)
+		// Add subgroups to the groups list.
+		subgroupIDs, err := fetchSubGroups(group.ID, client)
+		if err != nil {
+			return nil, err
+		}
+
+		groupIDs = append(groupIDs, subgroupIDs...)
+	}
+
+	// Add projects from groups to the projects list.
+	projectIDs, err := fetchProjectsFromGroups(groupIDs, client)
 	if err != nil {
 		return nil, err
 	}
@@ -42,6 +58,8 @@ func fetchOpenedMergeRequests(config *Config, client GitLabClient) ([]*MergeRequ
 	for _, project := range config.Projects {
 		projectIDs = append(projectIDs, project.ID)
 	}
+
+	var allMRs []*MergeRequestWithApprovals
 
 	for _, projectID := range projectIDs {
 		options := &gitlab.ListProjectMergeRequestsOptions{
@@ -89,9 +107,9 @@ func fetchOpenedMergeRequests(config *Config, client GitLabClient) ([]*MergeRequ
 	return allMRs, nil
 }
 
-func fetchProjectsFromGroups(config *Config, client GitLabClient) ([]int, error) {
+func fetchProjectsFromGroups(groupIDs []int, client GitLabClient) ([]int, error) {
 	var projectIDs []int
-	for _, group := range config.Groups {
+	for _, groupID := range groupIDs {
 		options := &gitlab.ListGroupProjectsOptions{
 			ListOptions: gitlab.ListOptions{
 				PerPage: 50,
@@ -100,7 +118,7 @@ func fetchProjectsFromGroups(config *Config, client GitLabClient) ([]int, error)
 		}
 
 		for {
-			projects, resp, err := client.ListGroupProjects(group.ID, options)
+			projects, resp, err := client.ListGroupProjects(groupID, options)
 			if err != nil {
 				return nil, err
 			}
@@ -118,4 +136,34 @@ func fetchProjectsFromGroups(config *Config, client GitLabClient) ([]int, error)
 	}
 
 	return projectIDs, nil
+}
+
+func fetchSubGroups(groupID int, client GitLabClient) ([]int, error) {
+	var groupIDs []int
+
+	options := &gitlab.ListSubGroupsOptions{
+		ListOptions: gitlab.ListOptions{
+			PerPage: 50,
+			Page:    1,
+		},
+	}
+
+	for {
+		groups, resp, err := client.ListSubGroups(groupID, options)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, group := range groups {
+			groupIDs = append(groupIDs, group.ID)
+		}
+
+		if resp.CurrentPage >= resp.TotalPages {
+			break
+		}
+
+		options.Page = resp.NextPage
+	}
+
+	return groupIDs, nil
 }

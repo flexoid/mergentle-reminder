@@ -88,12 +88,7 @@ func TestFetchOpenedMergeRequests(t *testing.T) {
 }
 
 func TestFetchProjectsFromGroups(t *testing.T) {
-	config := &Config{
-		Groups: []ConfigGroup{
-			{ID: 1},
-			{ID: 2},
-		},
-	}
+	groups := []int{1, 2}
 
 	mockGitLabClient := mocks.NewGitLabClient(t)
 
@@ -104,7 +99,7 @@ func TestFetchProjectsFromGroups(t *testing.T) {
 		},
 	}
 
-	mockGitLabClient.On("ListGroupProjects", config.Groups[0].ID, &options).Return(
+	mockGitLabClient.On("ListGroupProjects", groups[0], &options).Return(
 		[]*gitlab.Project{
 			{ID: 1},
 			{ID: 2},
@@ -115,7 +110,7 @@ func TestFetchProjectsFromGroups(t *testing.T) {
 
 	optionsForPage2 := options
 	optionsForPage2.Page = 2
-	mockGitLabClient.On("ListGroupProjects", config.Groups[0].ID, &optionsForPage2).Return(
+	mockGitLabClient.On("ListGroupProjects", groups[0], &optionsForPage2).Return(
 		[]*gitlab.Project{
 			{ID: 3},
 			{ID: 4},
@@ -124,7 +119,7 @@ func TestFetchProjectsFromGroups(t *testing.T) {
 		nil,
 	).Once()
 
-	mockGitLabClient.On("ListGroupProjects", config.Groups[1].ID, &options).Return(
+	mockGitLabClient.On("ListGroupProjects", groups[1], &options).Return(
 		[]*gitlab.Project{
 			{ID: 5},
 		},
@@ -132,7 +127,7 @@ func TestFetchProjectsFromGroups(t *testing.T) {
 		nil,
 	).Once()
 
-	projectIDs, err := fetchProjectsFromGroups(config, mockGitLabClient)
+	projectIDs, err := fetchProjectsFromGroups(groups, mockGitLabClient)
 
 	mockGitLabClient.AssertExpectations(t)
 	assert.NoError(t, err)
@@ -143,4 +138,75 @@ func TestFetchProjectsFromGroups(t *testing.T) {
 	assert.Equal(t, 3, projectIDs[2])
 	assert.Equal(t, 4, projectIDs[3])
 	assert.Equal(t, 5, projectIDs[4])
+}
+
+func TestFetchSubGroups(t *testing.T) {
+	testCases := []struct {
+		name        string
+		mockClient  func() *mocks.GitLabClient
+		groupID     int
+		expectedIDs []int
+		expectedErr error
+	}{
+		{
+			name: "Single page of subgroups",
+			mockClient: func() *mocks.GitLabClient {
+				mockClient := mocks.NewGitLabClient(t)
+				groups := []*gitlab.Group{
+					{ID: 1},
+					{ID: 2},
+				}
+				mockClient.On("ListSubGroups", 1, &gitlab.ListSubGroupsOptions{
+					ListOptions: gitlab.ListOptions{
+						PerPage: 50,
+						Page:    1,
+					},
+				}).Return(groups, &gitlab.Response{TotalPages: 1, CurrentPage: 1}, nil)
+				return mockClient
+			},
+			groupID:     1,
+			expectedIDs: []int{1, 2},
+			expectedErr: nil,
+		},
+		{
+			name: "Multiple pages of subgroups",
+			mockClient: func() *mocks.GitLabClient {
+				mockClient := mocks.NewGitLabClient(t)
+				groupsPage1 := []*gitlab.Group{
+					{ID: 1},
+					{ID: 2},
+				}
+				groupsPage2 := []*gitlab.Group{
+					{ID: 3},
+					{ID: 4},
+				}
+				mockClient.On("ListSubGroups", 1, &gitlab.ListSubGroupsOptions{
+					ListOptions: gitlab.ListOptions{
+						PerPage: 50,
+						Page:    1,
+					},
+				}).Return(groupsPage1, &gitlab.Response{TotalPages: 2, CurrentPage: 1, NextPage: 2}, nil)
+				mockClient.On("ListSubGroups", 1, &gitlab.ListSubGroupsOptions{
+					ListOptions: gitlab.ListOptions{
+						PerPage: 50,
+						Page:    2,
+					},
+				}).Return(groupsPage2, &gitlab.Response{TotalPages: 2, CurrentPage: 2}, nil)
+				return mockClient
+			},
+			groupID:     1,
+			expectedIDs: []int{1, 2, 3, 4},
+			expectedErr: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			client := tc.mockClient()
+			groupIDs, err := fetchSubGroups(tc.groupID, client)
+
+			assert.Equal(t, tc.expectedErr, err)
+			assert.Equal(t, tc.expectedIDs, groupIDs)
+		})
+	}
 }

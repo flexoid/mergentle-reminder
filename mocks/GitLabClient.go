@@ -212,6 +212,85 @@ func (_c *GitLabClient_ListProjectMergeRequests_Call) RunAndReturn(run func(int,
 	return _c
 }
 
+// ListSubGroups provides a mock function with given fields: groupID, opt, options
+func (_m *GitLabClient) ListSubGroups(groupID int, opt *gitlab.ListSubGroupsOptions, options ...gitlab.RequestOptionFunc) ([]*gitlab.Group, *gitlab.Response, error) {
+	_va := make([]interface{}, len(options))
+	for _i := range options {
+		_va[_i] = options[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, groupID, opt)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 []*gitlab.Group
+	var r1 *gitlab.Response
+	var r2 error
+	if rf, ok := ret.Get(0).(func(int, *gitlab.ListSubGroupsOptions, ...gitlab.RequestOptionFunc) ([]*gitlab.Group, *gitlab.Response, error)); ok {
+		return rf(groupID, opt, options...)
+	}
+	if rf, ok := ret.Get(0).(func(int, *gitlab.ListSubGroupsOptions, ...gitlab.RequestOptionFunc) []*gitlab.Group); ok {
+		r0 = rf(groupID, opt, options...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*gitlab.Group)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int, *gitlab.ListSubGroupsOptions, ...gitlab.RequestOptionFunc) *gitlab.Response); ok {
+		r1 = rf(groupID, opt, options...)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*gitlab.Response)
+		}
+	}
+
+	if rf, ok := ret.Get(2).(func(int, *gitlab.ListSubGroupsOptions, ...gitlab.RequestOptionFunc) error); ok {
+		r2 = rf(groupID, opt, options...)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// GitLabClient_ListSubGroups_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListSubGroups'
+type GitLabClient_ListSubGroups_Call struct {
+	*mock.Call
+}
+
+// ListSubGroups is a helper method to define mock.On call
+//   - groupID int
+//   - opt *gitlab.ListSubGroupsOptions
+//   - options ...gitlab.RequestOptionFunc
+func (_e *GitLabClient_Expecter) ListSubGroups(groupID interface{}, opt interface{}, options ...interface{}) *GitLabClient_ListSubGroups_Call {
+	return &GitLabClient_ListSubGroups_Call{Call: _e.mock.On("ListSubGroups",
+		append([]interface{}{groupID, opt}, options...)...)}
+}
+
+func (_c *GitLabClient_ListSubGroups_Call) Run(run func(groupID int, opt *gitlab.ListSubGroupsOptions, options ...gitlab.RequestOptionFunc)) *GitLabClient_ListSubGroups_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]gitlab.RequestOptionFunc, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(gitlab.RequestOptionFunc)
+			}
+		}
+		run(args[0].(int), args[1].(*gitlab.ListSubGroupsOptions), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *GitLabClient_ListSubGroups_Call) Return(_a0 []*gitlab.Group, _a1 *gitlab.Response, _a2 error) *GitLabClient_ListSubGroups_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
+func (_c *GitLabClient_ListSubGroups_Call) RunAndReturn(run func(int, *gitlab.ListSubGroupsOptions, ...gitlab.RequestOptionFunc) ([]*gitlab.Group, *gitlab.Response, error)) *GitLabClient_ListSubGroups_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 type mockConstructorTestingTNewGitLabClient interface {
 	mock.TestingT
 	Cleanup(func())
