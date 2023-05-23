@@ -1,5 +1,5 @@
 gitlab:
-  url: https://gitlab.monterosa.co.uk
+  url: https://gitlab.com
 projects:
   - id: 123
   - id: 456
