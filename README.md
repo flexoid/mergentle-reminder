@@ -12,7 +12,7 @@ The name "Mergentle Reminder" is a playful combination of the words "merge" and 
 - Supports GitLab projects and groups.
 - Filters out draft merge requests.
 - Retrieves approvers and additional merge request information.
-- Configurable with a YAML file.
+- Configurable with a YAML file or environment variables.
 
 ## Screenshot
 
@@ -20,25 +20,20 @@ The name "Mergentle Reminder" is a playful combination of the words "merge" and 
 
 ## Configuration
 
-You can configure the Mergentle Reminder bot using a `config.yaml` file. The YAML file allows you to specify GitLab projects, groups, and the GitLab instance URL.
+You can configure the Mergentle Reminder bot using a `config.yaml` file or by setting the environment variables. 
 
-Example `config.yaml`:
+Example config can be found in `config.yaml.example`.
 
-```yaml
-gitlab:
-  url: https://your-gitlab-instance.com
-projects:
-  - id: 1
-  - id: 2
-groups:
-  - id: 3
-```
+In addition to the config.yaml file, the following environment variables can be set:
 
-In addition to the config.yaml file, the following environment variables should be set:
-
+* `GITLAB_URL`: The URL of your GitLab instance (defaults to https://gitlab.com).
 * `GITLAB_TOKEN`: Your GitLab personal access token.
 * `SLACK_WEBHOOK_URL`: The webhook URL for the Slack channel where the bot will send messages.
+* `PROJECTS`: A comma-separated list of GitLab project IDs to check for merge requests.
+* `GROUPS`: A comma-separated list of GitLab group IDs to check for merge requests.
 * `CONFIG_PATH` (optional): The path to the config.yaml configuration file. Defaults to config.yaml.
+
+Environment variables take precedence over the config.yaml file.
 
 ## Building and Running the Application
 

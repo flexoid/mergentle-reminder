@@ -1,6 +1,6 @@
 gitlab:
-  url: https://gitlab.com
-  token: your-gitlab-token
+  url: https://gitlab.example.com
+  token: abcdef1234567890
 slack:
   webhook_url: https://hooks.slack.com/services/your-slack-webhook-url
 projects:

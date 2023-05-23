@@ -10,31 +10,11 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type Config struct {
-	GitLab struct {
-		URL string `yaml:"url"`
-	} `yaml:"gitlab"`
-	Projects []ConfigProject
-	Groups   []ConfigGroup
-}
-
-type ConfigGroup struct {
-	ID int `yaml:"id"`
-}
-
-type ConfigProject struct {
-	ID int `yaml:"id"`
-}
-
 func main() {
-	configPath := os.Getenv("CONFIG_PATH")
-	if configPath == "" {
-		configPath = "config.yaml"
-	}
-
-	config, err := readConfig(configPath)
+	// Load configuration
+	config, err := loadConfig(&OsEnv{})
 	if err != nil {
-		fmt.Printf("Error reading configuration file: %v\n", err)
+		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
 
