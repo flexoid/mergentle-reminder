@@ -75,10 +75,21 @@ func formatMergeRequestsSummary(mrs []*MergeRequestWithApprovals) string {
 
 		createdAtStr := mr.MergeRequest.CreatedAt.Format("2 January 2006, 15:04 MST")
 
+		var extra string
+		if !mr.MergeRequest.BlockingDiscussionsResolved {
+			extra = ":warning: Has unresolved blocking discussions"
+		}
+
 		summary += fmt.Sprintf(
-			":arrow_forward: <%s|%s>\n*Author:* %s\n*Created at:* %s\n*Approved by:* %s\n\n",
+			":arrow_forward: <%s|%s>\n*Author:* %s\n*Created at:* %s\n*Approved by:* %s\n",
 			mr.MergeRequest.WebURL, mr.MergeRequest.Title, mr.MergeRequest.Author.Name, createdAtStr, approvedBy,
 		)
+
+		if extra != "" {
+			summary += fmt.Sprintf("*Extra:* %s\n", extra)
+		}
+
+		summary += "\n"
 	}
 
 	return summary
