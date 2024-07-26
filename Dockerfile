@@ -1,4 +1,4 @@
-FROM golang:1.20 as builder
+FROM golang:1.22-bookworm AS builder
 
 WORKDIR /app
 
@@ -8,7 +8,7 @@ RUN go mod download
 COPY . .
 RUN go build -o mergentle-reminder
 
-FROM gcr.io/distroless/base-debian11
+FROM gcr.io/distroless/base-debian12
 
 COPY --from=builder /app/mergentle-reminder /mergentle-reminder
 

@@ -23,18 +23,18 @@ The name "Mergentle Reminder" is a playful combination of the words "merge" and 
 
 ## Configuration
 
-You can configure the Mergentle Reminder bot using a `config.yaml` file or by setting the environment variables. 
+You can configure the Mergentle Reminder bot using a `config.yaml` file or by setting the environment variables.
 
 Example config can be found in `config.yaml.example`.
 
 In addition to the config.yaml file, the following environment variables can be set:
 
-* `GITLAB_URL`: The URL of your GitLab instance (defaults to https://gitlab.com).
-* `GITLAB_TOKEN`: Your GitLab personal access token.
-* `SLACK_WEBHOOK_URL`: The webhook URL for the Slack channel where the bot will send messages.
-* `PROJECTS`: A comma-separated list of GitLab project IDs to check for merge requests.
-* `GROUPS`: A comma-separated list of GitLab group IDs to check for merge requests.
-* `CONFIG_PATH` (optional): The path to the config.yaml configuration file. Defaults to config.yaml.
+- `GITLAB_URL`: The URL of your GitLab instance (defaults to https://gitlab.com).
+- `GITLAB_TOKEN`: Your GitLab personal access token.
+- `SLACK_WEBHOOK_URL`: The webhook URL for the Slack channel where the bot will send messages.
+- `PROJECTS`: A comma-separated list of GitLab project IDs to check for merge requests.
+- `GROUPS`: A comma-separated list of GitLab group IDs to check for merge requests.
+- `CONFIG_PATH` (optional): The path to the config.yaml configuration file. Defaults to config.yaml.
 
 Environment variables take precedence over the config.yaml file.
 
@@ -69,6 +69,7 @@ docker run -e GITLAB_TOKEN=<your_gitlab_token> -e SLACK_WEBHOOK_URL=<your_slack_
 ```
 
 ### Deploying to Kubernetes
+
 Create a configmap for the config.yaml file:
 
 ```sh
@@ -91,3 +92,10 @@ kubectl apply -f k8s/
 ```
 
 The application will now run as a CronJob in your Kubernetes cluster, periodically sending reminders to the configured Slack channel.
+
+It is possible to create a new job manually for testing purposes:
+
+```sh
+kubectl -n mergentle-reminder create job --from=cronjob/mergentle-reminder test-job
+kubectl -n mergentle-reminder delete jobs/test-job
+```
