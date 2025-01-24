@@ -9,6 +9,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+require github.com/reugn/go-quartz v0.13.0
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect

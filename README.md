@@ -35,8 +35,21 @@ In addition to the config.yaml file, the following environment variables can be 
 - `PROJECTS`: A comma-separated list of GitLab project IDs to check for merge requests.
 - `GROUPS`: A comma-separated list of GitLab group IDs to check for merge requests.
 - `CONFIG_PATH` (optional): The path to the config.yaml configuration file. Defaults to config.yaml.
+- `CRON_SCHEDULE` (optional): The cron schedule for the bot to run. See [Run mode](#run-mode) and [supported format](https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format).
 
 Environment variables take precedence over the config.yaml file.
+
+### Run mode
+
+The bot can run in two modes: one-shot and cron.
+
+When no `CRON_SCHEDULE` variable or `cron_schedule` config parameter specified, the bot will execute in one-shot mode.
+In this mode, the bot will check for merge requests and send a message to the Slack channel once, then exit.
+It is useful for testing or integrating with something like CI pipeline or Kubernetes CronJob.
+
+When the cron schedule is specified, the bot will run in cron mode.
+In this mode, the bot will check for merge requests and send a message to the Slack channel according to the specified cron schedule.
+Well suited for running as as a container or daemon process.
 
 ## Building and Running the Application
 
@@ -84,6 +97,8 @@ kubectl -n mergentle-reminder create secret generic mergentle-reminder-secrets -
 
 Edit `schedule` in `k8s/cronjob.yaml` to specify the desired schedule. Set to run every hour by default.
 See the [CronJob documentation](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/) for more information.
+
+Make sure that the config does not include `cron_schedule` field, see
 
 Apply the Kubernetes manifests:
 

@@ -1,27 +1,68 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 
+	"github.com/reugn/go-quartz/job"
+	"github.com/reugn/go-quartz/quartz"
 	"github.com/xanzy/go-gitlab"
-	"gopkg.in/yaml.v2"
 )
 
 func main() {
 	// Load configuration
 	config, err := loadConfig(&OsEnv{})
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		log.Printf("Error loading configuration: %v", err)
 		os.Exit(1)
 	}
 
+	if config.CronSchedule == "" {
+		log.Printf("Running in one-shot mode")
+		execute(config)
+		return
+	}
+
+	runScheduler(config)
+}
+
+func runScheduler(config *Config) {
+	log.Printf("Running in cron mode with schedule: %s\n", config.CronSchedule)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sched := quartz.NewStdScheduler()
+	sched.Start(ctx)
+
+	cronTrigger, err := quartz.NewCronTrigger(config.CronSchedule)
+	if err != nil {
+		log.Printf("Error creating cron trigger: %v\n", err)
+		os.Exit(1)
+	}
+
+	executeJob := job.NewFunctionJob(func(_ context.Context) (int, error) {
+		execute(config)
+		return 0, nil
+	})
+
+	err = sched.ScheduleJob(quartz.NewJobDetail(executeJob, quartz.NewJobKey("executeJob")), cronTrigger)
+	if err != nil {
+		log.Printf("Error scheduling job: %v\n", err)
+		os.Exit(1)
+	}
+
+	<-ctx.Done()
+}
+
+func execute(config *Config) {
 	glClient, err := gitlab.NewClient(os.Getenv("GITLAB_TOKEN"),
 		gitlab.WithBaseURL(config.GitLab.URL))
 	if err != nil {
-		fmt.Printf("Error creating GitLab client: %v\n", err)
+		log.Printf("Error creating GitLab client: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -29,12 +70,12 @@ func main() {
 
 	mrs, err := fetchOpenedMergeRequests(config, gitlabClient)
 	if err != nil {
-		fmt.Printf("Error fetching opened merge requests: %v\n", err)
+		log.Printf("Error fetching opened merge requests: %v\n", err)
 		os.Exit(1)
 	}
 
 	if len(mrs) == 0 {
-		fmt.Println("No opened merge requests found.")
+		log.Println("No opened merge requests found.")
 		os.Exit(0)
 	}
 
@@ -43,26 +84,11 @@ func main() {
 	slackClient := &slackClient{webhookURL: os.Getenv("SLACK_WEBHOOK_URL")}
 	err = sendSlackMessage(slackClient, summary)
 	if err != nil {
-		fmt.Printf("Error sending Slack message: %v\n", err)
+		log.Printf("Error sending Slack message: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Println("Successfully sent merge request summary to Slack.")
-}
-
-func readConfig(file string) (*Config, error) {
-	data, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-
-	var config Config
-	err = yaml.Unmarshal(data, &config)
-	if err != nil {
-		return nil, err
-	}
-
-	return &config, nil
+	log.Println("Successfully sent merge request summary to Slack.")
 }
 
 func formatMergeRequestsSummary(mrs []*MergeRequestWithApprovals) string {

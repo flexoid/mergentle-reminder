@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
@@ -15,8 +17,9 @@ type Config struct {
 	Slack struct {
 		WebhookURL string `yaml:"webhook_url"`
 	} `yaml:"slack"`
-	Projects []ConfigProject
-	Groups   []ConfigGroup
+	Projects     []ConfigProject
+	Groups       []ConfigGroup
+	CronSchedule string `yaml:"cron_schedule"`
 }
 
 type ConfigGroup struct {
@@ -91,11 +94,31 @@ func loadConfig(env Env) (*Config, error) {
 		return nil, fmt.Errorf("SLACK_WEBHOOK_URL environment variable is required")
 	}
 
+	cronSchedule := env.Getenv("CRON_SCHEDULE")
+	if cronSchedule != "" {
+		config.CronSchedule = cronSchedule
+	}
+
 	if len(config.Projects) == 0 && len(config.Groups) == 0 {
 		return nil, fmt.Errorf("Neither groups nor projects were provided")
 	}
 
 	return config, nil
+}
+
+func readConfig(file string) (*Config, error) {
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+
+	var config Config
+	err = yaml.Unmarshal(data, &config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &config, nil
 }
 
 func parseIDsAsConfigProjects(env string) ([]ConfigProject, error) {

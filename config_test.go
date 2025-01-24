@@ -44,6 +44,7 @@ func TestLoadConfig(t *testing.T) {
 			"SLACK_WEBHOOK_URL": "webhook",
 			"CONFIG_PATH":       "NONEXISTING.yaml",
 			"PROJECTS":          "1,2,3",
+			"CRON_SCHEDULE":     "0 1 * * *",
 		}}
 
 		config, err := loadConfig(env)
@@ -54,6 +55,7 @@ func TestLoadConfig(t *testing.T) {
 			{ID: 2},
 			{ID: 3},
 		}, config.Projects)
+		assert.Equal(t, "0 1 * * *", config.CronSchedule)
 	})
 
 	// Test loading config from file
@@ -76,5 +78,6 @@ func TestLoadConfig(t *testing.T) {
 			{ID: 1},
 			{ID: 2},
 		}, config.Groups)
+		assert.Equal(t, "0 7,13 * * 1-5", config.CronSchedule)
 	})
 }
