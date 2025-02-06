@@ -17,9 +17,10 @@ type Config struct {
 	Slack struct {
 		WebhookURL string `yaml:"webhook_url"`
 	} `yaml:"slack"`
-	Projects     []ConfigProject
-	Groups       []ConfigGroup
-	CronSchedule string `yaml:"cron_schedule"`
+	Projects     []ConfigProject `yaml:"projects"`
+	Groups       []ConfigGroup   `yaml:"groups"`
+	CronSchedule string          `yaml:"cron_schedule"`
+	Authors      []ConfigAuthor  `yaml:"authors"`
 }
 
 type ConfigGroup struct {
@@ -28,6 +29,11 @@ type ConfigGroup struct {
 
 type ConfigProject struct {
 	ID int `yaml:"id"`
+}
+
+type ConfigAuthor struct {
+	ID       int    `yaml:"id"`
+	Username string `yaml:"username"`
 }
 
 type Env interface {
@@ -92,6 +98,13 @@ func loadConfig(env Env) (*Config, error) {
 	}
 	if config.Slack.WebhookURL == "" {
 		return nil, fmt.Errorf("SLACK_WEBHOOK_URL environment variable is required")
+	}
+
+	if env := env.Getenv("AUTHORS"); env != "" {
+		config.Authors, err = parseAuthors(env)
+		if err != nil {
+			return nil, fmt.Errorf("Error parsing AUTHORS environment variable: %v\n", err)
+		}
 	}
 
 	cronSchedule := env.Getenv("CRON_SCHEDULE")
@@ -159,4 +172,18 @@ func parseIDs(env string) ([]int, error) {
 		ids = append(ids, id)
 	}
 	return ids, nil
+}
+
+func parseAuthors(env string) ([]ConfigAuthor, error) {
+	var authors []ConfigAuthor
+	for _, authorStr := range strings.Split(env, ",") {
+		author := ConfigAuthor{}
+		if id, err := strconv.Atoi(authorStr); err == nil {
+			author.ID = id
+		} else {
+			author.Username = authorStr
+		}
+		authors = append(authors, author)
+	}
+	return authors, nil
 }

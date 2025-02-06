@@ -10,3 +10,7 @@ groups:
   - id: 1
   - id: 2
 cron_schedule: "0 7,13 * * 1-5"
+authors:
+  - username: "janedoe"
+  - username: "johndoe"
+  - id: 918
