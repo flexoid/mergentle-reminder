@@ -59,7 +59,7 @@ func runScheduler(config *Config) {
 }
 
 func execute(config *Config) {
-	glClient, err := gitlab.NewClient(os.Getenv("GITLAB_TOKEN"),
+	glClient, err := gitlab.NewClient(config.GitLab.Token,
 		gitlab.WithBaseURL(config.GitLab.URL))
 	if err != nil {
 		log.Printf("Error creating GitLab client: %v\n", err)
@@ -81,7 +81,7 @@ func execute(config *Config) {
 
 	summary := formatMergeRequestsSummary(mrs)
 
-	slackClient := &slackClient{webhookURL: os.Getenv("SLACK_WEBHOOK_URL")}
+	slackClient := &slackClient{webhookURL: config.Slack.WebhookURL}
 	err = sendSlackMessage(slackClient, summary)
 	if err != nil {
 		log.Printf("Error sending Slack message: %v\n", err)
