@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type MockEnv struct {
@@ -17,9 +18,11 @@ func (e *MockEnv) Getenv(key string) string {
 func TestLoadConfig(t *testing.T) {
 	// Test default values and required environment variables
 	t.Run("missing required env variables", func(t *testing.T) {
-		env := &MockEnv{values: map[string]string{}}
+		env := &MockEnv{values: map[string]string{
+			"CONFIG_PATH": "NONEXISTING.yaml",
+		}}
 		_, err := loadConfig(env)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "GITLAB_TOKEN environment variable is required")
 	})
 
@@ -45,6 +48,7 @@ func TestLoadConfig(t *testing.T) {
 			"CONFIG_PATH":       "NONEXISTING.yaml",
 			"PROJECTS":          "1,2,3",
 			"CRON_SCHEDULE":     "0 1 * * *",
+			"AUTHORS":           "1,username,123",
 		}}
 
 		config, err := loadConfig(env)
@@ -56,6 +60,11 @@ func TestLoadConfig(t *testing.T) {
 			{ID: 3},
 		}, config.Projects)
 		assert.Equal(t, "0 1 * * *", config.CronSchedule)
+		assert.Equal(t, []ConfigAuthor{
+			{ID: 1},
+			{Username: "username"},
+			{ID: 123},
+		}, config.Authors)
 	})
 
 	// Test loading config from file
@@ -79,5 +88,10 @@ func TestLoadConfig(t *testing.T) {
 			{ID: 2},
 		}, config.Groups)
 		assert.Equal(t, "0 7,13 * * 1-5", config.CronSchedule)
+		assert.Equal(t, []ConfigAuthor{
+			{Username: "janedoe"},
+			{Username: "johndoe"},
+			{ID: 918},
+		}, config.Authors)
 	})
 }

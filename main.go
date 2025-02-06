@@ -74,6 +74,8 @@ func execute(config *Config) {
 		os.Exit(1)
 	}
 
+	mrs = filterMergeRequestsByAuthor(mrs, config.Authors)
+
 	if len(mrs) == 0 {
 		log.Println("No opened merge requests found.")
 		os.Exit(0)
@@ -119,4 +121,22 @@ func formatMergeRequestsSummary(mrs []*MergeRequestWithApprovals) string {
 	}
 
 	return summary
+}
+
+func filterMergeRequestsByAuthor(mrs []*MergeRequestWithApprovals, authors []ConfigAuthor) []*MergeRequestWithApprovals {
+	if len(authors) == 0 {
+		return mrs
+	}
+
+	var filteredMRs []*MergeRequestWithApprovals
+	for _, mr := range mrs {
+		for _, user := range authors {
+			if (user.ID != 0 && user.ID == mr.MergeRequest.Author.ID) ||
+				(user.Username != "" && user.Username == mr.MergeRequest.Author.Username) {
+				filteredMRs = append(filteredMRs, mr)
+				break
+			}
+		}
+	}
+	return filteredMRs
 }

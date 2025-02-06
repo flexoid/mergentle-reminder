@@ -36,6 +36,7 @@ In addition to the config.yaml file, the following environment variables can be 
 - `GROUPS`: A comma-separated list of GitLab group IDs to check for merge requests.
 - `CONFIG_PATH` (optional): The path to the config.yaml configuration file. Defaults to config.yaml.
 - `CRON_SCHEDULE` (optional): The cron schedule for the bot to run. See [Run mode](#run-mode) and [supported format](https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format).
+- `AUTHORS` (optional): A comma-separated list of user IDs or usernames to filter merge requests by author.
 
 Environment variables take precedence over the config.yaml file.
 
