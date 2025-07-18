@@ -7,30 +7,46 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/reugn/go-quartz/job"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/xanzy/go-gitlab"
 )
 
 func main() {
-	// Load configuration
+	// Check if running in AWS Lambda environment
+	if _, ok := os.LookupEnv("AWS_LAMBDA_RUNTIME_API"); ok {
+		mainLambda()
+	} else {
+		mainStandalone()
+	}
+}
+
+// Entry point for normal execution as a standalone application.
+func mainStandalone() {
 	config, err := loadConfig(&OsEnv{})
 	if err != nil {
-		log.Printf("Error loading configuration: %v", err)
-		os.Exit(1)
+		log.Fatalf("Error loading configuration: %v", err)
 	}
 
 	if config.CronSchedule == "" {
 		log.Printf("Running in one-shot mode")
-		execute(config)
+		if err := execute(config); err != nil {
+			log.Fatalf("Error executing: %v", err)
+		}
 		return
 	}
 
 	runScheduler(config)
 }
 
+// Entry point for AWS Lambda execution.
+func mainLambda() {
+	lambda.Start(HandleRequest)
+}
+
 func runScheduler(config *Config) {
-	log.Printf("Running in cron mode with schedule: %s\n", config.CronSchedule)
+	log.Printf("Running in cron mode with schedule: %s", config.CronSchedule)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -40,45 +56,63 @@ func runScheduler(config *Config) {
 
 	cronTrigger, err := quartz.NewCronTrigger(config.CronSchedule)
 	if err != nil {
-		log.Printf("Error creating cron trigger: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error creating cron trigger: %v", err)
 	}
 
 	executeJob := job.NewFunctionJob(func(_ context.Context) (int, error) {
-		execute(config)
-		return 0, nil
+		if err := execute(config); err != nil {
+			log.Printf("Error during scheduled execution: %v", err)
+			return 1, err // Indicate failure
+		}
+		return 0, nil // Indicate success
 	})
 
 	err = sched.ScheduleJob(quartz.NewJobDetail(executeJob, quartz.NewJobKey("executeJob")), cronTrigger)
 	if err != nil {
-		log.Printf("Error scheduling job: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error scheduling job: %v", err)
 	}
 
 	<-ctx.Done()
 }
 
-func execute(config *Config) {
+// LambdaInput represents the input event for the Lambda function.
+type LambdaInput struct{}
+
+// HandleRequest is the main Lambda handler function.
+func HandleRequest(ctx context.Context, input LambdaInput) (string, error) {
+	config, err := loadConfig(&OsEnv{})
+	if err != nil {
+		log.Printf("Error loading configuration: %v", err)
+		return "", err
+	}
+
+	err = execute(config)
+	if err != nil {
+		return "", err
+	}
+
+	return "Success", nil
+}
+
+func execute(config *Config) error {
 	glClient, err := gitlab.NewClient(config.GitLab.Token,
 		gitlab.WithBaseURL(config.GitLab.URL))
 	if err != nil {
-		log.Printf("Error creating GitLab client: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error creating GitLab client: %w", err)
 	}
 
 	gitlabClient := &gitLabClient{client: glClient}
 
 	mrs, err := fetchOpenedMergeRequests(config, gitlabClient)
 	if err != nil {
-		log.Printf("Error fetching opened merge requests: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error fetching opened merge requests: %w", err)
 	}
 
 	mrs = filterMergeRequestsByAuthor(mrs, config.Authors)
 
 	if len(mrs) == 0 {
 		log.Println("No opened merge requests found.")
-		os.Exit(0)
+		return nil
 	}
 
 	summary := formatMergeRequestsSummary(mrs)
@@ -86,11 +120,11 @@ func execute(config *Config) {
 	slackClient := &slackClient{webhookURL: config.Slack.WebhookURL}
 	err = sendSlackMessage(slackClient, summary)
 	if err != nil {
-		log.Printf("Error sending Slack message: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error sending Slack message: %w", err)
 	}
 
 	log.Println("Successfully sent merge request summary to Slack.")
+	return nil
 }
 
 func formatMergeRequestsSummary(mrs []*MergeRequestWithApprovals) string {

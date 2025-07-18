@@ -58,21 +58,21 @@ func loadConfig(env Env) (*Config, error) {
 	if _, err := os.Stat(configPath); err == nil {
 		config, err = readConfig(configPath)
 		if err != nil {
-			return nil, fmt.Errorf("Error reading configuration file: %v\n", err)
+			return nil, fmt.Errorf("error reading configuration file: %v", err)
 		}
 	}
 
 	if env := env.Getenv("PROJECTS"); env != "" {
 		config.Projects, err = parseIDsAsConfigProjects(env)
 		if err != nil {
-			return nil, fmt.Errorf("Error parsing PROJECTS environment variable: %v\n", err)
+			return nil, fmt.Errorf("error parsing PROJECTS environment variable: %v", err)
 		}
 	}
 
 	if env := env.Getenv("GROUPS"); env != "" {
 		config.Groups, err = parseIDsAsConfigGroups(env)
 		if err != nil {
-			return nil, fmt.Errorf("Error parsing GROUPS environment variable: %v\n", err)
+			return nil, fmt.Errorf("error parsing GROUPS environment variable: %v", err)
 		}
 	}
 
@@ -103,7 +103,7 @@ func loadConfig(env Env) (*Config, error) {
 	if env := env.Getenv("AUTHORS"); env != "" {
 		config.Authors, err = parseAuthors(env)
 		if err != nil {
-			return nil, fmt.Errorf("Error parsing AUTHORS environment variable: %v\n", err)
+			return nil, fmt.Errorf("error parsing AUTHORS environment variable: %v", err)
 		}
 	}
 
@@ -113,7 +113,7 @@ func loadConfig(env Env) (*Config, error) {
 	}
 
 	if len(config.Projects) == 0 && len(config.Groups) == 0 {
-		return nil, fmt.Errorf("Neither groups nor projects were provided")
+		return nil, fmt.Errorf("neither groups nor projects were provided")
 	}
 
 	return config, nil

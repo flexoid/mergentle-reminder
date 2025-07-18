@@ -38,3 +38,6 @@ Thumbs.db
 
 # Config
 config.yaml
+
+# CDK environment file
+cdk/.env

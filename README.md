@@ -115,3 +115,33 @@ It is possible to create a new job manually for testing purposes:
 kubectl -n mergentle-reminder create job --from=cronjob/mergentle-reminder test-job
 kubectl -n mergentle-reminder delete jobs/test-job
 ```
+
+### Deploying to AWS Lambda with CDK
+
+This project can be deployed as a serverless AWS Lambda function using the AWS Cloud Development Kit (CDK).
+
+1.  **Prerequisites:**
+    *   [Install Node.js and npm](https://nodejs.org/en/download/)
+    *   [Install the AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_install)
+    *   [Configure your AWS credentials](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_prereqs)
+
+2.  **Setup the CDK Project:**
+    Navigate to the `cdk` directory and install the dependencies:
+    ```sh
+    cd cdk
+    npm install
+    ```
+
+3.  **Configure the Application:**
+    Create a `.env` file in the `cdk` directory by copying the example:
+    ```sh
+    cp .env.example .env
+    ```
+    Edit the `.env` file and provide your actual secrets and configuration.
+
+4.  **Deploy to AWS:**
+    From the `cdk` directory, run the following command to deploy the application to your AWS account:
+    ```sh
+    cdk deploy
+    ```
+    The CDK will create a new Lambda function, an EventBridge rule to run it on a schedule, and configure the necessary environment variables.
